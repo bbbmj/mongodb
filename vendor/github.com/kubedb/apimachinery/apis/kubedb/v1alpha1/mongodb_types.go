@@ -38,6 +38,9 @@ type MongoDBSpec struct {
 	// MongoDB replica set
 	ReplicaSet *MongoDBReplicaSet `json:"replicaSet,omitempty"`
 
+	// MongoDB sharding topology.
+	Topology *MongoDBShardingTopology `json:"topology,omitempty"`
+
 	// StorageType can be durable (default) or ephemeral
 	StorageType StorageType `json:"storageType,omitempty"`
 
@@ -46,6 +49,20 @@ type MongoDBSpec struct {
 
 	// Database authentication secret
 	DatabaseSecret *core.SecretVolumeSource `json:"databaseSecret,omitempty"`
+
+	// Secret with SSL certificates. Contains `tls.pem` or keyfile `key.txt` depending on enableSSL.
+	CertificateSecret *core.SecretVolumeSource `json:"certificateSecret,omitempty"`
+
+	// To enable ssl in replicaset and sharding connection
+	EnableSSL bool `json:"enableSSL,omitempty"`
+
+	// ClusterAuthMode for replicaset or sharding. (default will be x509 if enableSSL is true.)
+	// See available ClusterAuthMode: https://docs.mongodb.com/manual/reference/program/mongod/#cmdoption-mongod-clusterauthmode
+	ClusterAuthMode string `json:"clusterAuthMode,omitempty"`
+
+	// SSLMode for both standalone and clusters. (default, preferSSL if enableSSL is true.)
+	// See more options: https://docs.mongodb.com/manual/reference/program/mongod/#cmdoption-mongod-sslmode
+	SSLMode bool `json:"sslMode,omitempty"`
 
 	// Init is used to initialize database
 	// +optional
@@ -121,8 +138,33 @@ type MongoDBSpec struct {
 }
 
 type MongoDBReplicaSet struct {
-	Name    string                   `json:"name"`
+	Name string `json:"name"`
+	// Deprecated: Use spec.certificateSecret
 	KeyFile *core.SecretVolumeSource `json:"keyFile,omitempty"`
+}
+
+type MongoDBShardingTopology struct {
+	Shard        MongoDBNode `json:"shard"`
+	ConfigServer MongoDBNode `json:"configServer"`
+	Mongos       MongoDBNode `json:"mongos"`
+}
+
+type MongoDBNode struct {
+	// Replicas represents number of replica for this specific type of node
+	Replicas *int32 `json:"replicas,omitempty"`
+	Prefix   string `json:"prefix,omitempty"`
+	// Storage to specify how storage shall be used.
+	Storage *core.PersistentVolumeClaimSpec `json:"storage,omitempty"`
+	// Compute Resources required by the sidecar container.
+	Resources core.ResourceRequirements `json:"resources,omitempty"`
+
+	// ConfigSource is an optional field to provide custom configuration file for database (i.e mongod.cnf).
+	// If specified, this file will be used as configuration file otherwise default configuration file will be used.
+	ConfigSource *core.VolumeSource `json:"configSource,omitempty"`
+
+	// PodTemplate is an optional configuration for pods used to expose database
+	// +optional
+	PodTemplate ofst.PodTemplateSpec `json:"podTemplate,omitempty"`
 }
 
 type MongoDBStatus struct {
